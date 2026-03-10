@@ -1,1 +1,1110 @@
-file:///Users/julesmillet/Downloads/index.html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wyylde · Partner Positioning Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red:      #C8102E;
+    --red-glow: rgba(200,16,46,0.15);
+    --gold:     #D4AF37;
+    --silver:   #A8A9AD;
+    --bronze:   #CD7F32;
+    --bg:       #060610;
+    --bg2:      #0C0C1E;
+    --bg3:      #13132A;
+    --border:   rgba(255,255,255,0.07);
+    --border2:  rgba(255,255,255,0.12);
+    --text:     #E2E2EE;
+    --muted:    #5A5A7A;
+    --white:    #FFFFFF;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-weight: 400;
+  }
+
+  /* Animated bg mesh */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 50%, rgba(200,16,46,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 80% 30%, rgba(212,175,55,0.03) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 50% at 50% 80%, rgba(70,80,200,0.03) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Grain */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 1;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  /* ── LAYOUT ── */
+  .shell {
+    position: relative; z-index: 2;
+    display: grid;
+    grid-template-rows: 64px 1fr;
+    height: 100vh;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    display: flex; align-items: center;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--border);
+    gap: 20px;
+    background: rgba(6,6,16,0.8);
+    backdrop-filter: blur(12px);
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .brand-mark {
+    width: 36px; height: 36px;
+    background: var(--red);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px; color: white; letter-spacing: 1px;
+    clip-path: polygon(0 0, 88% 0, 100% 12%, 100% 100%, 12% 100%, 0 88%);
+  }
+
+  .brand-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 3px; color: var(--white);
+  }
+
+  .brand-sep {
+    width: 1px; height: 24px;
+    background: var(--border2);
+    margin: 0 4px;
+  }
+
+  .brand-sub {
+    font-size: 11px; color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 20px;
+  }
+
+  .status-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #444;
+    transition: background 0.3s;
+  }
+
+  .status-dot.live { background: #44ff88; box-shadow: 0 0 6px #44ff88; }
+  .status-dot.error { background: var(--red); }
+  .status-dot.loading { background: var(--gold); animation: pulse 1s infinite; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .status-text { transition: color 0.3s; }
+
+  .last-update {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+  }
+
+  /* ── MAIN ── */
+  .main {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .sidebar-section {
+    padding: 20px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .section-title::after {
+    content: ''; flex: 1; height: 1px;
+    background: var(--border);
+  }
+
+  /* Filter pills */
+  .pill-list { display: flex; flex-direction: column; gap: 4px; }
+
+  .pill {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.12s;
+    user-select: none;
+  }
+
+  .pill:hover { background: rgba(255,255,255,0.03); border-color: var(--border); }
+
+  .pill.on {
+    background: rgba(200,16,46,0.06);
+    border-color: rgba(200,16,46,0.25);
+  }
+
+  .pill-check {
+    width: 14px; height: 14px; flex-shrink: 0;
+    border: 1.5px solid var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: transparent;
+    transition: all 0.12s;
+  }
+
+  .pill.on .pill-check {
+    background: var(--red); border-color: var(--red);
+    color: white;
+  }
+
+  .pill-label { font-size: 12px; flex: 1; font-weight: 500; }
+
+  .pill-n {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    background: var(--bg3); padding: 1px 6px;
+  }
+
+  /* Select-all / none */
+  .filter-actions {
+    display: flex; gap: 6px; margin-bottom: 10px;
+  }
+
+  .btn-xs {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 3px 8px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; transition: all 0.12s;
+  }
+
+  .btn-xs:hover { border-color: var(--red); color: var(--white); }
+
+  /* Tier pills */
+  .tier-list { display: flex; flex-direction: column; gap: 4px; }
+
+  .tier-pill {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.12s;
+    user-select: none;
+  }
+
+  .tier-pill:hover { border-color: var(--border); }
+  .tier-pill.on { border-color: var(--border); background: var(--bg3); }
+
+  .tier-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .tier-pill-label { font-size: 11px; flex: 1; font-weight: 600; }
+  .tier-pill-range { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); }
+
+  /* Stats */
+  .stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .stat-card {
+    background: var(--bg3); padding: 10px 12px;
+    border: 1px solid var(--border);
+  }
+
+  .stat-card-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .stat-card-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; line-height: 1;
+    color: var(--white);
+  }
+
+  .stat-card.accent .stat-card-val { color: var(--red); }
+
+  /* Reset btn */
+  .btn-reset {
+    margin: 16px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    padding: 9px 0; width: calc(100% - 36px);
+    background: transparent; border: 1px solid rgba(200,16,46,0.4);
+    color: var(--red); cursor: pointer; transition: all 0.2s;
+  }
+
+  .btn-reset:hover { background: var(--red); color: white; border-color: var(--red); }
+
+  /* Config section */
+  .config-section {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .config-input {
+    width: 100%; padding: 7px 10px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; outline: none; transition: border 0.15s;
+    margin-top: 6px;
+  }
+
+  .config-input:focus { border-color: var(--red); }
+  .config-input::placeholder { color: var(--muted); }
+
+  .btn-connect {
+    margin-top: 8px; width: 100%;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 8px 0;
+    background: var(--red); border: none;
+    color: white; cursor: pointer; transition: all 0.2s;
+  }
+
+  .btn-connect:hover { background: #e01535; }
+
+  /* ── CHART AREA ── */
+  .chart-area {
+    display: flex; flex-direction: column;
+    overflow: hidden; position: relative;
+  }
+
+  .chart-topbar {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(6,6,16,0.6);
+    flex-shrink: 0;
+  }
+
+  .active-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; padding: 3px 8px;
+    background: rgba(200,16,46,0.1);
+    border: 1px solid rgba(200,16,46,0.3);
+    color: #ff6680; letter-spacing: 0.5px;
+  }
+
+  .shown-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted); flex-shrink: 0;
+  }
+
+  .shown-count strong { color: var(--white); }
+
+  /* Canvas wrap */
+  .canvas-wrap {
+    flex: 1; position: relative;
+    padding: 36px 48px 52px 60px;
+    overflow: hidden;
+  }
+
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .ax-label {
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  .ax-x {
+    bottom: 12px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .ax-y {
+    left: 8px; top: 50%;
+    transform: translateY(-50%) rotate(-90deg);
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .ax-arr { color: var(--red); font-size: 13px; }
+
+  /* ── LOADING OVERLAY ── */
+  .loading-overlay {
+    position: absolute; inset: 0; z-index: 10;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: var(--bg);
+    transition: opacity 0.4s;
+  }
+
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .loader-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px; letter-spacing: 4px; color: var(--white);
+    margin-bottom: 8px;
+  }
+
+  .loader-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--muted); margin-bottom: 32px;
+  }
+
+  .loader-bar-wrap {
+    width: 200px; height: 2px; background: var(--bg3);
+    position: relative; overflow: hidden;
+  }
+
+  .loader-bar {
+    height: 100%; background: var(--red);
+    animation: loadbar 1.5s ease-in-out infinite;
+  }
+
+  @keyframes loadbar {
+    0% { width: 0%; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  /* ── SETUP OVERLAY (shown when no sheet connected) ── */
+  .setup-overlay {
+    position: absolute; inset: 0; z-index: 9;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: var(--bg);
+    transition: opacity 0.4s;
+  }
+
+  .setup-overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .setup-box {
+    width: 480px; padding: 40px;
+    border: 1px solid var(--border2);
+    background: var(--bg2);
+  }
+
+  .setup-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px; letter-spacing: 3px; color: var(--white);
+    margin-bottom: 8px;
+  }
+
+  .setup-sub {
+    font-size: 13px; color: var(--muted); margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  .setup-steps {
+    display: flex; flex-direction: column; gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .setup-step {
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+
+  .step-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; color: var(--red); line-height: 1;
+    flex-shrink: 0; width: 20px;
+  }
+
+  .step-text { font-size: 12px; color: var(--text); line-height: 1.6; }
+  .step-text code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--gold);
+    background: var(--bg3); padding: 1px 5px;
+  }
+
+  .setup-input {
+    width: 100%; padding: 10px 14px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; outline: none; transition: border 0.15s;
+    margin-bottom: 10px;
+  }
+
+  .setup-input:focus { border-color: var(--red); }
+  .setup-input::placeholder { color: var(--muted); }
+
+  .btn-setup {
+    width: 100%; padding: 12px;
+    background: var(--red); border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px; letter-spacing: 3px;
+    color: white; cursor: pointer; transition: background 0.2s;
+  }
+
+  .btn-setup:hover { background: #e01535; }
+
+  /* ── TOOLTIP ── */
+  .tooltip {
+    position: fixed; z-index: 100;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    padding: 16px 20px;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.12s;
+    min-width: 240px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+  }
+
+  .tooltip.show { opacity: 1; }
+
+  .tt-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 1px; color: var(--white);
+    margin-bottom: 2px;
+  }
+
+  .tt-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted); margin-bottom: 12px;
+  }
+
+  .tt-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+  }
+
+  .tt-row:last-of-type { border-bottom: none; }
+  .tt-key { color: var(--muted); }
+  .tt-val { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+
+  .tt-tier {
+    margin-top: 10px; padding: 5px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    display: inline-block;
+  }
+
+  /* ── ERROR BANNER ── */
+  .error-banner {
+    position: absolute; bottom: 60px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(200,16,46,0.15); border: 1px solid rgba(200,16,46,0.4);
+    color: #ff6680; padding: 10px 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    display: none; z-index: 20;
+  }
+
+  .error-banner.show { display: block; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── TOPBAR ── -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">W</div>
+      <div>
+        <div class="brand-name">Wyylde · Partner Map</div>
+      </div>
+    </div>
+    <div class="brand-sep"></div>
+    <span class="brand-sub">Internationalization Strategy</span>
+
+    <div class="topbar-right">
+      <div class="status-badge">
+        <div class="status-dot" id="statusDot"></div>
+        <span class="status-text" id="statusText">Not connected</span>
+      </div>
+      <div class="last-update" id="lastUpdate"></div>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+
+      <!-- Google Sheets config -->
+      <div class="config-section">
+        <div class="section-title">Google Sheets</div>
+        <input class="config-input" id="sheetUrl" type="text"
+          placeholder="Colle l'URL de ton Google Sheet ici…">
+        <button class="btn-connect" onclick="connectSheet()">Connecter le Sheet</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="sidebar-section">
+        <div class="section-title">Vue d'ensemble</div>
+        <div class="stats-grid">
+          <div class="stat-card accent">
+            <div class="stat-card-label">Visibles</div>
+            <div class="stat-card-val" id="stVisible">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Total</div>
+            <div class="stat-card-val" id="stTotal">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label" style="color:var(--gold)">Tier 1</div>
+            <div class="stat-card-val" id="stT1" style="color:var(--gold)">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label" style="color:var(--silver)">Tier 2</div>
+            <div class="stat-card-val" id="stT2" style="color:var(--silver)">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category filter -->
+      <div class="sidebar-section">
+        <div class="section-title">Catégorie</div>
+        <div class="filter-actions">
+          <button class="btn-xs" onclick="allFilter('cat')">Tout</button>
+          <button class="btn-xs" onclick="noneFilter('cat')">Aucun</button>
+        </div>
+        <div class="pill-list" id="catFilters"></div>
+      </div>
+
+      <!-- Country filter -->
+      <div class="sidebar-section">
+        <div class="section-title">Pays</div>
+        <div class="filter-actions">
+          <button class="btn-xs" onclick="allFilter('country')">Tout</button>
+          <button class="btn-xs" onclick="noneFilter('country')">Aucun</button>
+        </div>
+        <div class="pill-list" id="countryFilters"></div>
+      </div>
+
+      <!-- Tier filter -->
+      <div class="sidebar-section">
+        <div class="section-title">Tier</div>
+        <div class="tier-list">
+          <div class="tier-pill on" data-tier="1" onclick="toggleTier(1)">
+            <div class="tier-swatch" style="background:var(--gold)"></div>
+            <span class="tier-pill-label" style="color:var(--gold)">Tier 1</span>
+            <span class="tier-pill-range">≥ 7.5</span>
+          </div>
+          <div class="tier-pill on" data-tier="2" onclick="toggleTier(2)">
+            <div class="tier-swatch" style="background:var(--silver)"></div>
+            <span class="tier-pill-label" style="color:var(--silver)">Tier 2</span>
+            <span class="tier-pill-range">5.0 – 7.4</span>
+          </div>
+          <div class="tier-pill on" data-tier="3" onclick="toggleTier(3)">
+            <div class="tier-swatch" style="background:var(--bronze)"></div>
+            <span class="tier-pill-label" style="color:var(--bronze)">Tier 3</span>
+            <span class="tier-pill-range">&lt; 5.0</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-reset" onclick="resetAll()">↺ Réinitialiser</button>
+
+    </aside>
+
+    <!-- ── CHART ── -->
+    <div class="chart-area">
+
+      <div class="chart-topbar">
+        <div class="active-tags" id="activeTags"></div>
+        <div class="shown-count">
+          <strong id="shownN">—</strong> / <strong id="totalN">—</strong> partenaires affichés
+        </div>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="scatter"></canvas>
+        <div class="ax-label ax-x">
+          <span class="ax-arr">◀</span> Niche / Sex-Focused
+          <span style="color:var(--border2);font-size:16px">————————————</span>
+          Mainstream / Généraliste <span class="ax-arr">▶</span>
+        </div>
+        <div class="ax-label ax-y">
+          <span class="ax-arr">▲</span> International
+          <span style="color:var(--border2);font-size:16px">————————</span>
+          Local <span class="ax-arr">▼</span>
+        </div>
+      </div>
+
+      <!-- Setup overlay -->
+      <div class="setup-overlay" id="setupOverlay">
+        <div class="setup-box">
+          <div class="setup-title">Connecter Google Sheets</div>
+          <div class="setup-sub">Suis ces 3 étapes pour afficher ta matrice partenaires en temps réel.</div>
+          <div class="setup-steps">
+            <div class="setup-step">
+              <div class="step-num">1</div>
+              <div class="step-text">
+                Ouvre ton Google Sheet et va dans <strong>Fichier → Partager → Publier sur le web</strong>.<br>
+                Sélectionne la feuille <code>Partners</code>, format <code>CSV</code>, puis clique <strong>Publier</strong>.
+              </div>
+            </div>
+            <div class="setup-step">
+              <div class="step-num">2</div>
+              <div class="step-text">
+                Copie l'URL générée (elle contient <code>/pub?</code>) ou l'URL normale de ton Sheet.<br>
+                Les deux formats sont acceptés.
+              </div>
+            </div>
+            <div class="setup-step">
+              <div class="step-num">3</div>
+              <div class="step-text">
+                Colle l'URL dans le champ à gauche et clique <strong>Connecter le Sheet</strong>.<br>
+                La carte se rafraîchit automatiquement toutes les <code>60 secondes</code>.
+              </div>
+            </div>
+          </div>
+          <input class="setup-input" id="setupUrl" type="text"
+            placeholder="https://docs.google.com/spreadsheets/d/…">
+          <button class="btn-setup" onclick="connectFromSetup()">Connecter</button>
+        </div>
+      </div>
+
+      <!-- Loading overlay -->
+      <div class="loading-overlay hidden" id="loadingOverlay">
+        <div class="loader-title">Chargement</div>
+        <div class="loader-sub">Lecture du Google Sheet…</div>
+        <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
+      </div>
+
+      <div class="error-banner" id="errorBanner"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div class="tt-name" id="ttName"></div>
+  <div class="tt-meta" id="ttMeta"></div>
+  <div id="ttRows"></div>
+  <div class="tt-tier" id="ttTier"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIG — Structure attendue dans Google Sheets
+// Colonnes (ligne 1 = headers) :
+//   A: name | B: category | C: country | D: score_E | E: score_F | F: score_G
+//   G: score_H | H: score_I | I: score_J | J: score_K
+// Les axes X et Y sont calculés automatiquement
+// ══════════════════════════════════════════════════════════════════════════════
+
+const REFRESH_MS = 60000; // refresh toutes les 60s
+
+let allPartners = [];
+let selectedCats     = new Set();
+let selectedCountries= new Set();
+let selectedTiers    = new Set([1,2,3]);
+let sheetCsvUrl      = localStorage.getItem('wyylde_sheet_url') || '';
+let refreshTimer     = null;
+let dotPoints        = [];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getTier(s) { return s>=7.5?1:s>=5?2:3; }
+function getTierColor(t) { return t===1?'#D4AF37':t===2?'#A8A9AD':'#CD7F32'; }
+function getTierLabel(t) {
+  return t===1?'Tier 1 — Strategic Expansion':t===2?'Tier 2 — Growth Partner':'Tier 3 — Tactical / Revenue';
+}
+
+function calcScore(p) {
+  return Math.round((p.e*0.20 + p.f*0.15 + p.g*0.20 + p.h*0.15 + p.i*0.10 + p.j*0.10 + p.k*0.10)*10)/10;
+}
+
+function calcX(p) { return Math.round(((p.h+p.i+p.k)/3)*10)/10; }
+function calcY(p) { return Math.round(((p.e+p.k)/2)*10)/10; }
+
+// ── URL → CSV URL ─────────────────────────────────────────────────────────────
+function toCsvUrl(url) {
+  if (!url) return null;
+  url = url.trim();
+  // Already a pub CSV URL
+  if (url.includes('/pub?') && url.includes('output=csv')) return url;
+  // Published but without output=csv
+  if (url.includes('/pub?')) return url + (url.includes('?')? '&':'?') + 'output=csv';
+  // Regular sheet URL: extract ID
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (m) {
+    return `https://docs.google.com/spreadsheets/d/${m[1]}/pub?output=csv`;
+  }
+  return null;
+}
+
+// ── Fetch & parse CSV ─────────────────────────────────────────────────────────
+async function fetchSheet() {
+  const csvUrl = toCsvUrl(sheetCsvUrl);
+  if (!csvUrl) return;
+
+  setStatus('loading', 'Chargement…');
+  showLoading(true);
+
+  try {
+    const resp = await fetch(csvUrl + '&t=' + Date.now());
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    parseCSV(text);
+    setStatus('live', 'Connecté · Live');
+    document.getElementById('lastUpdate').textContent =
+      'Mis à jour ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+    hideError();
+  } catch(e) {
+    setStatus('error', 'Erreur de connexion');
+    showError('Impossible de charger le Sheet. Vérifie que le document est bien publié en CSV.');
+  } finally {
+    showLoading(false);
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return;
+
+  // Skip header row
+  const rows = lines.slice(1);
+  allPartners = [];
+
+  rows.forEach(line => {
+    const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g,''));
+    if (!cols[0]) return;
+
+    const name = cols[0];
+    const category = cols[1] || '—';
+    const country  = cols[2] || '—';
+    const e = parseFloat(cols[3]) || 0;
+    const f = parseFloat(cols[4]) || 0;
+    const g = parseFloat(cols[5]) || 0;
+    const h = parseFloat(cols[6]) || 0;
+    const i = parseFloat(cols[7]) || 0;
+    const j = parseFloat(cols[8]) || 0;
+    const k = parseFloat(cols[9]) || 0;
+
+    if (!name) return;
+
+    const p = { name, category, country, e,f,g,h,i,j,k };
+    p.score = calcScore(p);
+    p.x = calcX(p);
+    p.y = calcY(p);
+    allPartners.push(p);
+  });
+
+  rebuildFilters();
+  draw();
+}
+
+// ── Filter UI ─────────────────────────────────────────────────────────────────
+function rebuildFilters() {
+  const cats = [...new Set(allPartners.map(p=>p.category))].sort();
+  const cntrs= [...new Set(allPartners.map(p=>p.country))].sort();
+
+  // Keep existing selections if they exist, else select all
+  const newCats = new Set(cats);
+  const newCntr = new Set(cntrs);
+  selectedCats      = new Set([...newCats].filter(c => selectedCats.size===0||selectedCats.has(c)));
+  selectedCountries = new Set([...newCntr].filter(c => selectedCountries.size===0||selectedCountries.has(c)));
+  if (selectedCats.size===0) selectedCats = newCats;
+  if (selectedCountries.size===0) selectedCountries = newCntr;
+
+  buildPillList('catFilters', cats, selectedCats, 'cat');
+  buildPillList('countryFilters', cntrs, selectedCountries, 'country');
+}
+
+function buildPillList(containerId, items, selectedSet, type) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  items.forEach(item => {
+    const n = allPartners.filter(p=>(type==='cat'?p.category:p.country)===item).length;
+    const div = document.createElement('div');
+    div.className = 'pill' + (selectedSet.has(item)?' on':'');
+    div.innerHTML = `<div class="pill-check">✓</div>
+      <span class="pill-label">${item}</span>
+      <span class="pill-n">${n}</span>`;
+    div.onclick = () => {
+      if (selectedSet.has(item)) selectedSet.delete(item);
+      else selectedSet.add(item);
+      div.classList.toggle('on', selectedSet.has(item));
+      draw();
+    };
+    el.appendChild(div);
+  });
+}
+
+function allFilter(type) {
+  if (type==='cat') {
+    allPartners.map(p=>p.category).forEach(c=>selectedCats.add(c));
+    buildPillList('catFilters',[...new Set(allPartners.map(p=>p.category))].sort(),selectedCats,'cat');
+  } else {
+    allPartners.map(p=>p.country).forEach(c=>selectedCountries.add(c));
+    buildPillList('countryFilters',[...new Set(allPartners.map(p=>p.country))].sort(),selectedCountries,'country');
+  }
+  draw();
+}
+
+function noneFilter(type) {
+  if (type==='cat') { selectedCats.clear(); buildPillList('catFilters',[...new Set(allPartners.map(p=>p.category))].sort(),selectedCats,'cat'); }
+  else { selectedCountries.clear(); buildPillList('countryFilters',[...new Set(allPartners.map(p=>p.country))].sort(),selectedCountries,'country'); }
+  draw();
+}
+
+function toggleTier(t) {
+  if (selectedTiers.has(t)) selectedTiers.delete(t); else selectedTiers.add(t);
+  document.querySelector(`.tier-pill[data-tier="${t}"]`).classList.toggle('on', selectedTiers.has(t));
+  draw();
+}
+
+function resetAll() {
+  selectedCats      = new Set(allPartners.map(p=>p.category));
+  selectedCountries = new Set(allPartners.map(p=>p.country));
+  selectedTiers     = new Set([1,2,3]);
+  rebuildFilters();
+  document.querySelectorAll('.tier-pill').forEach(p=>p.classList.add('on'));
+  draw();
+}
+
+function getFiltered() {
+  return allPartners.filter(p =>
+    selectedCats.has(p.category) &&
+    selectedCountries.has(p.country) &&
+    selectedTiers.has(getTier(p.score))
+  );
+}
+
+// ── Canvas draw ───────────────────────────────────────────────────────────────
+const canvas = document.getElementById('scatter');
+const ctx    = canvas.getContext('2d');
+const R = 11;
+
+function draw() {
+  const wrap = document.getElementById('canvasWrap');
+  const dpr  = window.devicePixelRatio || 1;
+  const W = wrap.clientWidth  - 108;
+  const H = wrap.clientHeight - 88;
+  if (W <= 0 || H <= 0) return;
+
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,W,H);
+
+  const P = 16;
+  const pw = W - P*2, ph = H - P*2;
+  const mx = P + pw/2, my = P + ph/2;
+
+  // Quadrant fills
+  const qFills = [
+    'rgba(200,16,46,0.03)','rgba(60,140,60,0.03)',
+    'rgba(200,16,46,0.055)','rgba(60,140,60,0.055)',
+  ];
+  [[P,my,pw/2,ph/2],[mx,my,pw/2,ph/2],[P,P,pw/2,ph/2],[mx,P,pw/2,ph/2]]
+    .forEach((q,i)=>{ ctx.fillStyle=qFills[i]; ctx.fillRect(q[0],q[1],q[2],q[3]); });
+
+  // Grid lines
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1;
+  for(let i=0;i<=10;i++){
+    const lx=P+(i/10)*pw; ctx.beginPath(); ctx.moveTo(lx,P); ctx.lineTo(lx,P+ph); ctx.stroke();
+    const ly=P+ph-(i/10)*ph; ctx.beginPath(); ctx.moveTo(P,ly); ctx.lineTo(P+pw,ly); ctx.stroke();
+  }
+
+  // Center crosshair
+  ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.setLineDash([3,5]);
+  ctx.beginPath(); ctx.moveTo(mx,P); ctx.lineTo(mx,P+ph); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(P,my); ctx.lineTo(P+pw,my); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Tick labels
+  ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.font='9px JetBrains Mono,monospace';
+  ctx.textAlign='center';
+  for(let i=0;i<=10;i+=2) ctx.fillText(i, P+(i/10)*pw, P+ph+14);
+  ctx.textAlign='right';
+  for(let i=0;i<=10;i+=2) ctx.fillText(i, P-6, P+ph-(i/10)*ph+4);
+
+  // Quadrant labels
+  ctx.font='bold 11px Bebas Neue,sans-serif';
+  ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.textAlign='center';
+  ctx.fillText('NICHE · LOCAL',         P+pw*0.25, P+ph*0.87);
+  ctx.fillText('MAINSTREAM · LOCAL',    P+pw*0.75, P+ph*0.87);
+  ctx.fillText('NICHE · INTERNATIONAL', P+pw*0.25, P+ph*0.14);
+  ctx.fillText('MAINSTREAM · INTL',     P+pw*0.75, P+ph*0.14);
+
+  // Points
+  const filtered = getFiltered();
+  dotPoints = [];
+
+  filtered.forEach(p => {
+    const tier  = getTier(p.score);
+    const color = getTierColor(tier);
+    const cx = P + (p.x/10)*pw;
+    const cy = P + ph - (p.y/10)*ph;
+    dotPoints.push({p, cx, cy});
+
+    // Glow
+    const g = ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.8);
+    g.addColorStop(0, color+'35'); g.addColorStop(1,'transparent');
+    ctx.beginPath(); ctx.arc(cx,cy,R*2.8,0,Math.PI*2);
+    ctx.fillStyle=g; ctx.fill();
+
+    // Dot
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2);
+    ctx.fillStyle=color; ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=1.5; ctx.stroke();
+
+    // Score inside
+    ctx.fillStyle = tier===1?'#000':'rgba(255,255,255,0.92)';
+    ctx.font='bold 8px JetBrains Mono,monospace'; ctx.textAlign='center';
+    ctx.fillText(p.score.toFixed(1), cx, cy+3);
+
+    // Name label
+    ctx.font='600 11px Syne,sans-serif'; ctx.textAlign='left';
+    ctx.fillStyle='rgba(6,6,16,0.85)';
+    ctx.fillText(p.name, cx+R+7, cy+4);
+    ctx.fillStyle=color;
+    ctx.fillText(p.name, cx+R+6, cy+3);
+  });
+
+  // ── Update sidebar stats ──
+  document.getElementById('stVisible').textContent = filtered.length;
+  document.getElementById('stTotal').textContent   = allPartners.length;
+  document.getElementById('stT1').textContent = filtered.filter(p=>getTier(p.score)===1).length;
+  document.getElementById('stT2').textContent = filtered.filter(p=>getTier(p.score)===2).length;
+  document.getElementById('shownN').textContent = filtered.length;
+  document.getElementById('totalN').textContent  = allPartners.length;
+
+  // Active filter tags
+  const tagsEl = document.getElementById('activeTags');
+  tagsEl.innerHTML = '';
+  const cats    = new Set(allPartners.map(p=>p.category));
+  const cntrs   = new Set(allPartners.map(p=>p.country));
+  if (selectedCats.size < cats.size)
+    [...selectedCats].forEach(c=>{ const t=document.createElement('div'); t.className='tag'; t.textContent=c; tagsEl.appendChild(t); });
+  if (selectedCountries.size < cntrs.size)
+    [...selectedCountries].forEach(c=>{ const t=document.createElement('div'); t.className='tag'; t.textContent='🌍 '+c; tagsEl.appendChild(t); });
+  if (selectedTiers.size < 3)
+    [...selectedTiers].forEach(t=>{ const el=document.createElement('div'); el.className='tag'; el.textContent='T'+t; tagsEl.appendChild(el); });
+}
+
+// ── Tooltip ───────────────────────────────────────────────────────────────────
+const tooltip = document.getElementById('tooltip');
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let hit = null;
+  for (const pt of dotPoints) {
+    const dx=pt.cx-mx, dy=pt.cy-my;
+    if (Math.sqrt(dx*dx+dy*dy) < R+6) { hit=pt; break; }
+  }
+  if (hit) {
+    const p = hit.p; const tier = getTier(p.score); const color = getTierColor(tier);
+    document.getElementById('ttName').textContent = p.name;
+    document.getElementById('ttMeta').textContent = `${p.category} · ${p.country}`;
+    document.getElementById('ttRows').innerHTML = [
+      ['Score global',       p.score.toFixed(1)+' / 10'],
+      ['Axis X (Mainstream)',p.x.toFixed(1)],
+      ['Axis Y (Intl)',      p.y.toFixed(1)],
+      ['Territorial Leverage', p.e],
+      ['Female & Premium',   p.f],
+      ['Revenue Potential',  p.g],
+      ['Brand Desirability', p.h],
+    ].map(([k,v])=>`<div class="tt-row"><span class="tt-key">${k}</span><span class="tt-val" style="color:${color}">${v}</span></div>`).join('');
+    const ttTier = document.getElementById('ttTier');
+    ttTier.textContent = getTierLabel(tier);
+    ttTier.style.cssText = `background:${color}18;border:1px solid ${color}44;color:${color};margin-top:10px;padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;display:inline-block;`;
+    tooltip.style.left = (e.clientX+16)+'px';
+    tooltip.style.top  = (e.clientY-20)+'px';
+    tooltip.classList.add('show');
+    canvas.style.cursor='pointer';
+  } else {
+    tooltip.classList.remove('show');
+    canvas.style.cursor='default';
+  }
+});
+canvas.addEventListener('mouseleave', ()=>tooltip.classList.remove('show'));
+
+// ── Status helpers ────────────────────────────────────────────────────────────
+function setStatus(state, text) {
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + state;
+  document.getElementById('statusText').textContent = text;
+}
+
+function showLoading(v) {
+  document.getElementById('loadingOverlay').classList.toggle('hidden', !v);
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 6000);
+}
+
+function hideError() { document.getElementById('errorBanner').classList.remove('show'); }
+
+// ── Connect ───────────────────────────────────────────────────────────────────
+function connectSheet() {
+  const url = document.getElementById('sheetUrl').value.trim();
+  if (!url) { showError('Colle l\'URL de ton Google Sheet.'); return; }
+  sheetCsvUrl = url;
+  localStorage.setItem('wyylde_sheet_url', url);
+  document.getElementById('setupOverlay').classList.add('hidden');
+  startRefresh();
+}
+
+function connectFromSetup() {
+  const url = document.getElementById('setupUrl').value.trim();
+  if (!url) { showError('Colle l\'URL de ton Google Sheet.'); return; }
+  document.getElementById('sheetUrl').value = url;
+  connectSheet();
+}
+
+function startRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  fetchSheet();
+  refreshTimer = setInterval(fetchSheet, REFRESH_MS);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', draw);
+
+if (sheetCsvUrl) {
+  document.getElementById('sheetUrl').value = sheetCsvUrl;
+  document.getElementById('setupOverlay').classList.add('hidden');
+  startRefresh();
+} else {
+  document.getElementById('setupOverlay').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
